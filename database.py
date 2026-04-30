@@ -1,15 +1,34 @@
-import os
-from supabase import create_client
+import sqlite3
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://shvsgwvzqmmcbvpkqwig.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNodnNnd3Z6cW1tY2J2cGtxd2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNTA5OTksImV4cCI6MjA4ODkyNjk5OX0.VeilcM-9rg_TkA6EhDW0x46lxUQv4UHIwtA57M6sGXQ")
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+DB_NAME = "kitchenguard.db"
 
 def get_connection():
-    """Devuelve el cliente de Supabase (reemplaza la conexión SQLite)"""
-    return supabase
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    """Las tablas ya se crearon en Supabase, no necesita hacer nada"""
-    print("✅ Conectado a Supabase PostgreSQL")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS sensor_events (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            type      TEXT NOT NULL,
+            value     REAL NOT NULL,
+            alert     INTEGER DEFAULT 0,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS timers (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            label      TEXT NOT NULL,
+            duration   INTEGER NOT NULL,
+            active     INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS panic_events (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
+    conn.close()
