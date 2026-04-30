@@ -10,32 +10,36 @@ def receive_sensor():
         return jsonify({"error": "Faltan campos: type y value"}), 400
 
     sensor_type = data["type"]
-    value = float(data["value"])
-    alert = int(data.get("alert", 0))
+    value       = data["value"]
+    alert       = data.get("alert", 0)
 
-    supabase = get_connection()
-    result = supabase.table("sensor_events").insert({
-        "type": sensor_type,
-        "value": value,
-        "alert": alert
-    }).execute()
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+        (sensor_type, value, alert)
+    )
+    conn.commit()
+    conn.close()
 
     return jsonify({
         "message": "Lectura guardada",
-        "type": sensor_type,
-        "value": value,
-        "alert": alert
+        "type":    sensor_type,
+        "value":   value,
+        "alert":   alert
     }), 201
 
 @sensors_bp.route("/api/sensor", methods=["GET"])
 def get_sensors():
     sensor_type = request.args.get("type")
-    supabase = get_connection()
-    
-    query = supabase.table("sensor_events").select("*").order("timestamp", desc=True).limit(50)
-    
+    conn = get_connection()
     if sensor_type:
-        query = query.eq("type", sensor_type)
-    
-    result = query.execute()
-    return jsonify(result.data), 200
+        rows = conn.execute(
+            "SELECT * FROM sensor_events WHERE type=? ORDER BY timestamp DESC LIMIT 50",
+            (sensor_type,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM sensor_events ORDER BY timestamp DESC LIMIT 50"
+        ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows]), 200

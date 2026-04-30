@@ -5,17 +5,22 @@ panic_bp = Blueprint("panic", __name__)
 
 @panic_bp.route("/api/panic", methods=["POST"])
 def panic_button():
-    supabase = get_connection()
-    result = supabase.table("panic_events").insert({}).execute()
-    
-    print("🆘 BOTON DE PANICO ACTIVADO")
+    conn = get_connection()
+    cursor = conn.execute("INSERT INTO panic_events DEFAULT VALUES")
+    conn.commit()
+    event_id = cursor.lastrowid
+    conn.close()
+    print("BOTON DE PANICO ACTIVADO")
     return jsonify({
         "message": "Alerta de panico registrada",
-        "id": result.data[0]["id"] if result.data else 0
+        "id":      event_id
     }), 201
 
 @panic_bp.route("/api/panic", methods=["GET"])
 def get_panic_events():
-    supabase = get_connection()
-    result = supabase.table("panic_events").select("*").order("timestamp", desc=True).limit(20).execute()
-    return jsonify(result.data), 200
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM panic_events ORDER BY timestamp DESC LIMIT 20"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows]), 200
