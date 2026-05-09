@@ -46,7 +46,7 @@ def status():
         "SELECT value, alert FROM sensor_events WHERE type='gas' ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
     temp_row = conn.execute(
-        "SELECT value FROM sensor_events WHERE type='temperature' ORDER BY timestamp DESC LIMIT 1"
+        "SELECT value FROM sensor_events WHERE type='temperatura' ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
     panic_row = conn.execute(
         "SELECT COUNT(*) as cnt FROM panic_events WHERE timestamp >= datetime('now', '-5 minutes')"
