@@ -28,20 +28,33 @@ def receive_sensor():
         "alert":   alert
     }), 201
 
+# 🆕 Ruta para el historial (GET)
+@sensors_bp.route("/api/sensor", methods=["GET"])
+def get_sensors():
+    sensor_type = request.args.get("type")
+    conn = get_connection()
+    if sensor_type:
+        rows = conn.execute(
+            "SELECT * FROM sensor_events WHERE type=? ORDER BY timestamp DESC LIMIT 50",
+            (sensor_type,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM sensor_events ORDER BY timestamp DESC LIMIT 50"
+        ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows]), 200
+
 @sensors_bp.route("/api/sensor/latest", methods=["GET"])
 def get_latest():
     conn = get_connection()
-
     temp = conn.execute(
         "SELECT value FROM sensor_events WHERE type='temperatura' ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
-
     gas = conn.execute(
         "SELECT value, alert FROM sensor_events WHERE type='gas' ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
-
     conn.close()
-
     return jsonify({
         "temperature": float(temp["value"]) if temp else 0,
         "humidity":    55,
