@@ -24,3 +24,25 @@ def get_panic_events():
     ).fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
+
+@panic_bp.route("/api/panic/activo", methods=["GET"])
+def get_panic_activo():
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM panic_events WHERE atendido = 0 ORDER BY timestamp DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    if row:
+        return jsonify(dict(row)), 200
+    return jsonify(None), 200
+
+@panic_bp.route("/api/panic/<int:event_id>/atender", methods=["POST"])
+def atender_panico(event_id):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE panic_events SET atendido = 1 WHERE id = ?",
+        (event_id,)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Evento atendido", "id": event_id}), 200

@@ -27,8 +27,19 @@ def init_db():
         );
         CREATE TABLE IF NOT EXISTS panic_events (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+             atendido  INTEGER DEFAULT 0
         );
     """)
     conn.commit()
+
+
+    # Migración segura: si la tabla ya existía sin la columna, la agrega
+    try:
+        cursor.execute("ALTER TABLE panic_events ADD COLUMN atendido INTEGER DEFAULT 0")
+        conn.commit()
+        print("✅ Migración: columna 'atendido' agregada")
+    except sqlite3.OperationalError:
+        pass  # La columna ya existe, no hay nada que hacer
+
     conn.close()
