@@ -31,10 +31,18 @@ def get_panic_activo():
     row = conn.execute(
         "SELECT * FROM panic_events WHERE atendido = 0 ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
+    if not row:
+        conn.close()
+        return jsonify(None), 200
+    
+    count = conn.execute(
+        "SELECT COUNT(*) as total FROM panic_events WHERE atendido = 0"
+    ).fetchone()
     conn.close()
-    if row:
-        return jsonify(dict(row)), 200
-    return jsonify(None), 200
+    
+    result = dict(row)
+    result['intentos'] = count['total']
+    return jsonify(result), 200
 
 @panic_bp.route("/api/panic/<int:event_id>/atender", methods=["POST"])
 def atender_panico(event_id):
