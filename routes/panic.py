@@ -48,8 +48,7 @@ def get_panic_activo():
 def atender_panico(event_id):
     conn = get_connection()
     conn.execute(
-        "UPDATE panic_events SET atendido = 1 WHERE id = ?",
-        (event_id,)
+        "UPDATE panic_events SET atendido = 1 WHERE atendido = 0",
     )
     conn.commit()
     conn.close()
