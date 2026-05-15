@@ -30,6 +30,10 @@ def init_db():
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
              atendido  INTEGER DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS config (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
     """)
     conn.commit()
 
@@ -42,4 +46,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # La columna ya existe, no hay nada que hacer
 
+    # Valor por defecto del modo
+    try:
+        cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('modo', 'todo')")
+        conn.commit()
+        print("✅ Config: modo inicial insertado")
+    except sqlite3.OperationalError:
+        pass
     conn.close()

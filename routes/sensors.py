@@ -3,6 +3,12 @@ from database import get_connection
 
 sensors_bp = Blueprint("sensors", __name__)
 
+def get_modo_actual():
+    conn = get_connection()
+    row = conn.execute("SELECT value FROM config WHERE key = 'modo'").fetchone()
+    conn.close()
+    return row["value"] if row else "todo"
+
 @sensors_bp.route("/api/sensor", methods=["POST"])
 def receive_sensor():
     data = request.get_json()
@@ -12,6 +18,9 @@ def receive_sensor():
     sensor_type = data["type"]
     value       = data["value"]
     alert       = data.get("alert", 0)
+
+    if get_modo_actual() == "solo_alertas" and alert == 0:
+        return jsonify({"message": "Dato ignorado por modo solo_alertas"}), 200
 
     conn = get_connection()
     conn.execute(
@@ -62,3 +71,24 @@ def get_latest():
         "stove_on":    bool(gas["alert"])   if gas  else False,
         "panic":       False
     }), 200
+
+# ─── Config: modo historial ──────────────────────────────────
+@sensors_bp.route("/api/config/modo", methods=["GET"])
+def get_modo():
+    return jsonify({"modo": get_modo_actual()}), 200
+
+@sensors_bp.route("/api/config/modo", methods=["POST"])
+def set_modo():
+    data = request.get_json()
+    if not data or "modo" not in data:
+        return jsonify({"error": "Falta campo modo"}), 400
+    if data["modo"] not in ["todo", "solo_alertas"]:
+        return jsonify({"error": "Modo inválido"}), 400
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO config (key, value) VALUES ('modo', ?)",
+        (data["modo"],)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Modo actualizado", "modo": data["modo"]}), 200
