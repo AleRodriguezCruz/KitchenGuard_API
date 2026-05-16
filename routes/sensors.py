@@ -5,6 +5,34 @@ sensors_bp = Blueprint("sensors", __name__)
 
 COOLDOWN_SEGUNDOS = 180  # 3 minutos
 
+OPC_VALIDAS = ["todo", "solo_alertas", "cada_30min", "cada_hora", "cada_24h"]
+INTERVALO_OPC = {
+    "cada_30min": 30 * 60,
+    "cada_hora":  60 * 60,
+    "cada_24h":   24 * 60 * 60,
+}
+
+def guardar_lectura(conn, sensor_type, opc):
+    """Retorna True si corresponde guardar según el intervalo del modo."""
+    if opc not in INTERVALO_OPC:
+        return True  # 'todo' siempre guarda
+    
+    intervalo = INTERVALO_OPC[opc]
+    ultima = conn.execute(
+        "SELECT timestamp FROM sensor_events WHERE type=? AND alert=0 ORDER BY timestamp DESC LIMIT 1",
+        (sensor_type,)
+    ).fetchone()
+    
+    if not ultima:
+        return True  # primera lectura, guardar siempre
+    
+    segundos_actuales = int(conn.execute("SELECT strftime('%s','now')").fetchone()[0])
+    segundos_ultima   = int(conn.execute(
+        "SELECT strftime('%s', ?)", (ultima["timestamp"],)
+    ).fetchone()[0])
+    
+    return (segundos_actuales - segundos_ultima) >= intervalo
+
 def get_modo_actual():
     conn = get_connection()
     row = conn.execute("SELECT value FROM config WHERE key = 'modo'").fetchone()
@@ -61,17 +89,18 @@ def receive_sensor():
                     "UPDATE alertas_eventos SET valor_pico=? WHERE id=?",
                     (value, evento_activo["id"])
                 )
-
     elif alert == 0:
         if evento_activo:
             conn.execute(
                 "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE id=?",
                 (evento_activo["id"],)
             )
-        conn.execute(
-            "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
-            (sensor_type, value, alert)
-        )   
+        modo = get_modo_actual()
+        if modo != "solo_alertas" and guardar_lectura(conn, sensor_type, modo):
+            conn.execute(
+                "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+                (sensor_type, value, alert)
+            )
     conn.commit()
     conn.close()
 
@@ -139,7 +168,7 @@ def set_modo():
     data = request.get_json()
     if not data or "modo" not in data:
         return jsonify({"error": "Falta campo modo"}), 400
-    if data["modo"] not in ["todo", "solo_alertas"]:
+    if data["modo"] not in OPC_VALIDAS:
         return jsonify({"error": "Modo inválido"}), 400
     conn = get_connection()
     conn.execute(
