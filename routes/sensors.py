@@ -61,7 +61,13 @@ def get_latest():
         "SELECT value FROM sensor_events WHERE type='temperatura' ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
     gas = conn.execute(
-        "SELECT value, alert FROM sensor_events WHERE type='gas' ORDER BY timestamp DESC LIMIT 1"
+        "SELECT value, alert, timestamp FROM sensor_events WHERE type='gas' ORDER BY timestamp DESC LIMIT 1"
+    ).fetchone()
+    temp_alert = conn.execute(
+        "SELECT timestamp FROM sensor_events WHERE type='temperatura' AND alert=1 ORDER BY timestamp DESC LIMIT 1"
+    ).fetchone()
+    panic = conn.execute(
+        "SELECT timestamp FROM panic_events WHERE atendido=0 ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
     conn.close()
     return jsonify({
@@ -69,6 +75,9 @@ def get_latest():
         "humidity":    55,
         "gas_level":   float(gas["value"])  if gas  else 0,
         "stove_on":    bool(gas["alert"])   if gas  else False,
+        "gas_alert_at":  gas["timestamp"]        if gas and gas["alert"] else None,
+        "temp_alert_at": temp_alert["timestamp"] if temp_alert else None,
+        "panic_at":      panic["timestamp"]      if panic      else None,
         "panic":       False
     }), 200
 
