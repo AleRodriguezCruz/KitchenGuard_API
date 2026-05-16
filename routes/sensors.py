@@ -123,6 +123,19 @@ def get_alertas_eventos():
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
 
+@sensors_bp.route("/api/alertas/eventos/cerrar-activo", methods=["POST"])
+def cerrar_evento_activo():
+    data = request.get_json()
+    if not data or "type" not in data:
+        return jsonify({"error": "Falta type"}), 400
+    conn = get_connection()
+    conn.execute(
+        "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE type=? AND activa=1",
+        (data["type"],)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Evento cerrado"}), 200
 
 @sensors_bp.route("/api/config/modo", methods=["POST"])
 def set_modo():
