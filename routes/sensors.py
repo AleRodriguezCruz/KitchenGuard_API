@@ -32,7 +32,11 @@ def receive_sensor():
 
     if alert == 1:
         if not evento_activo:
-            # Nuevo evento de alerta
+            # Nuevo evento de alerta, guardar registro y crear evento
+            conn.execute(
+                "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+                (sensor_type, value, alert)
+            )
             conn.execute(
                 "INSERT INTO alertas_eventos (type, valor_inicio, valor_pico) VALUES (?, ?, ?)",
                 (sensor_type, value, value)
@@ -44,17 +48,20 @@ def receive_sensor():
                     "UPDATE alertas_eventos SET valor_pico=? WHERE id=?",
                     (value, evento_activo["id"])
                 )
-    elif alert == 0 and evento_activo:
-        # Cerrar evento activo
-        conn.execute(
-            "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE id=?",
-            (evento_activo["id"],)
-        )
 
-    conn.execute(
-        "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
-        (sensor_type, value, alert)
-    )
+    
+    elif alert == 0:
+        if evento_activo:
+                # Cerrar evento activo
+            conn.execute(
+                    "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE id=?",
+                    (evento_activo["id"],)
+                )
+            # Guardar lectura normal siempre (con o sin evento previo)
+        conn.execute(
+            "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+            (sensor_type, value, alert)
+        )   
     conn.commit()
     conn.close()
 
