@@ -20,9 +20,37 @@ def receive_sensor():
     alert       = data.get("alert", 0)
 
     if get_modo_actual() == "solo_alertas" and alert == 0:
-        return jsonify({"message": "Dato ignorado por modo solo_alertas"}), 200
+        return jsonify({"message": "Dato ignorado"}), 200
 
     conn = get_connection()
+
+    # ─── Lógica de alertas_eventos ────
+    evento_activo = conn.execute(
+        "SELECT * FROM alertas_eventos WHERE type=? AND activa=1 ORDER BY timestamp_inicio DESC LIMIT 1",
+        (sensor_type,)
+    ).fetchone()
+
+    if alert == 1:
+        if not evento_activo:
+            # Nuevo evento de alerta
+            conn.execute(
+                "INSERT INTO alertas_eventos (type, valor_inicio, valor_pico) VALUES (?, ?, ?)",
+                (sensor_type, value, value)
+            )
+        else:
+            # Actualizar pico si es mayor
+            if value > evento_activo["valor_pico"]:
+                conn.execute(
+                    "UPDATE alertas_eventos SET valor_pico=? WHERE id=?",
+                    (value, evento_activo["id"])
+                )
+    elif alert == 0 and evento_activo:
+        # Cerrar evento activo
+        conn.execute(
+            "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE id=?",
+            (evento_activo["id"],)
+        )
+
     conn.execute(
         "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
         (sensor_type, value, alert)
@@ -85,6 +113,16 @@ def get_latest():
 @sensors_bp.route("/api/config/modo", methods=["GET"])
 def get_modo():
     return jsonify({"modo": get_modo_actual()}), 200
+
+@sensors_bp.route("/api/alertas/eventos", methods=["GET"])
+def get_alertas_eventos():
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM alertas_eventos ORDER BY timestamp_inicio DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows]), 200
+
 
 @sensors_bp.route("/api/config/modo", methods=["POST"])
 def set_modo():

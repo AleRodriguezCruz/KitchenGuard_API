@@ -34,6 +34,15 @@ def init_db():
             key   TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS alertas_eventos (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            type          TEXT NOT NULL,
+            valor_inicio  REAL NOT NULL,
+            valor_pico    REAL DEFAULT 0,
+            timestamp_inicio DATETIME DEFAULT CURRENT_TIMESTAMP,
+            timestamp_fin    DATETIME DEFAULT NULL,
+            activa        INTEGER DEFAULT 1
+        );
     """)
     conn.commit()
 
@@ -51,6 +60,23 @@ def init_db():
         cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('modo', 'todo')")
         conn.commit()
         print("✅ Config: modo inicial insertado")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS alertas_eventos (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                type             TEXT NOT NULL,
+                valor_inicio     REAL NOT NULL,
+                valor_pico       REAL DEFAULT 0,
+                timestamp_inicio DATETIME DEFAULT CURRENT_TIMESTAMP,
+                timestamp_fin    DATETIME DEFAULT NULL,
+                activa           INTEGER DEFAULT 1
+            )
+        """)
+        conn.commit()
+        print("✅ Tabla alertas_eventos creada")
     except sqlite3.OperationalError:
         pass
     conn.close()
