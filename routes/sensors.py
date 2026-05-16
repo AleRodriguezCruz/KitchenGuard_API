@@ -5,19 +5,19 @@ sensors_bp = Blueprint("sensors", __name__)
 
 COOLDOWN_SEGUNDOS = 180  # 3 minutos
 
-OPC_VALIDAS = ["todo", "solo_alertas", "cada_30min", "cada_hora", "cada_24h"]
+OPC_VALIDAS = ["solo_alertas", "cada_5min", "cada_30min", "cada_hora", "cada_24h"]
 INTERVALO_OPC = {
+    "cada_5min":  5 * 60,
     "cada_30min": 30 * 60,
     "cada_hora":  60 * 60,
     "cada_24h":   24 * 60 * 60,
 }
 
 def guardar_lectura(conn, sensor_type, opc):
-    """Retorna True si corresponde guardar según el intervalo del modo."""
-    if opc not in INTERVALO_OPC:
-        return True  # 'todo' siempre guarda
+    intervalo = INTERVALO_OPC.get(opc)
+    if not intervalo:
+        return True  
     
-    intervalo = INTERVALO_OPC[opc]
     ultima = conn.execute(
         "SELECT timestamp FROM sensor_events WHERE type=? AND alert=0 ORDER BY timestamp DESC LIMIT 1",
         (sensor_type,)
