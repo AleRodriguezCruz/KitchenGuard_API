@@ -114,7 +114,6 @@ def get_latest():
     temp_evento = conn.execute(
         "SELECT timestamp_inicio FROM alertas_eventos WHERE type='temperatura' AND activa=1 ORDER BY timestamp_inicio DESC LIMIT 1"
     ).fetchone()
-
     panic = conn.execute(
         "SELECT timestamp FROM panic_events WHERE atendido=0 ORDER BY timestamp DESC LIMIT 1"
     ).fetchone()
@@ -123,8 +122,8 @@ def get_latest():
         "temperature": float(temp["value"]) if temp else 0,
         "humidity": 55,
         "gas_level": float(gas["value"])  if gas  else 0,
-        "stove_on": bool(gas["alert"])   if gas  else False,
-        "gas_alert_at": gas_evento["timestamp_inicio"]  if gas_evento  else None,
+        "stove_on":      gas_evento is not None,
+        "gas_alert_at":  gas_evento["timestamp_inicio"]    if gas_evento  else None,
         "temp_alert_at": temp_evento["timestamp_inicio"] if temp_evento else None,
         "panic_at": panic["timestamp"]  if panic        else None,
         "panic": False
