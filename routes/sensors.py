@@ -188,6 +188,16 @@ def get_alertas_eventos():
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
 
+#consultar si hay alerta activa
+@sensors_bp.route("/api/alertas/activa/<string:tipo>", methods=["GET"])
+def get_alerta_activa(tipo):
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT id FROM alertas_eventos WHERE type=? AND activa=1 LIMIT 1",
+        (tipo,)
+    ).fetchone()
+    conn.close()
+    return jsonify(row is not None), 200
 
 @sensors_bp.route("/api/alertas/eventos/cerrar-activo", methods=["POST"])
 def cerrar_evento_activo():
