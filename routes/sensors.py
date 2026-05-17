@@ -37,7 +37,7 @@ def get_modo_actual():
     conn = get_connection()
     row = conn.execute("SELECT value FROM config WHERE key = 'modo'").fetchone()
     conn.close()
-    return row["value"] if row else "todo"
+    return row["value"] if row else "solo_alertas"
 
 def en_cooldown(conn, sensor_type):
     row = conn.execute(
