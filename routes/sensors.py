@@ -190,7 +190,7 @@ def sensor_live():
 
 @sensors_bp.route("/api/sensor/live", methods=["GET"])
 def get_sensor_live():
-    return jsonify(ultimo_valor), 
+    return jsonify(ultimo_valor), 200
 
 @sensors_bp.route("/api/sensor/histograma", methods=["GET"])
 def get_histograma():
@@ -215,8 +215,24 @@ def get_histograma():
         GROUP BY strftime('%H', timestamp)
         ORDER BY hora ASC
     """, (tipo, fecha)).fetchall()
+    
+    alertas = conn.execute("""
+        SELECT 
+            strftime('%H', timestamp) as hora,
+            value,
+            timestamp
+        FROM sensor_events
+        WHERE type = ?
+          AND date(timestamp) = ?
+          AND alert = 1
+        ORDER BY timestamp ASC
+    """, (tipo, fecha)).fetchall()
+    
     conn.close()
-    return jsonify([dict(row) for row in rows]), 200
+    return jsonify({
+        "lecturas": [dict(row) for row in rows],
+        "alertas":  [dict(row) for row in alertas]
+        }), 200
 
 # ─── Config: modo historial ──────────────────────────────────
 @sensors_bp.route("/api/config/modo", methods=["GET"])
