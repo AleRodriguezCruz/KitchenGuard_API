@@ -179,6 +179,31 @@ def set_modo():
     conn.close()
     return jsonify({"message": "Modo actualizado", "modo": data["modo"]}), 200
 
+# Entrar al historial, el frontend consula que tab habia seleccionado y lo restaura
+@sensors_bp.route("/api/config/tab", methods=["GET"])
+def get_tab():
+    conn = get_connection()
+    row = conn.execute("SELECT value FROM config WHERE key = 'tab_historial'").fetchone()
+    conn.close()
+    return jsonify({"tab": row["value"] if row else "sensores"}), 200
+
+# Si cambias de tab (sensores, panico, todos) el frontend guarda lo seleccionado en el backend
+@sensors_bp.route("/api/config/tab", methods=["POST"])
+def set_tab():
+    data = request.get_json()
+    if not data or "tab" not in data:
+        return jsonify({"error": "Falta tab"}), 400
+    if data["tab"] not in ["sensores", "panico", "todos"]:
+        return jsonify({"error": "Tab inválido"}), 400
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO config (key, value) VALUES ('tab_historial', ?)",
+        (data["tab"],)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Tab actualizado", "tab": data["tab"]}), 200
+
 @sensors_bp.route("/api/alertas/eventos", methods=["GET"])
 def get_alertas_eventos():
     conn = get_connection()
