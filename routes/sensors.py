@@ -217,3 +217,25 @@ def cerrar_evento_activo():
     conn.commit()
     conn.close()
     return jsonify({"message": "Evento cerrado"}), 200
+
+# Eliminar registros seleccionasdos de sensor_events
+@sensors_bp.route("/api/sensor/eliminar", methods=["POST"])
+def eliminar_sensores():
+    data = request.get_json()
+    if not data or "ids" not in data or not isinstance(data["ids"], list):
+        return jsonify({"error": "Falta lista de ids"}), 400
+    
+    ids = data["ids"]
+    if not ids:
+        return jsonify({"error": "Lista vacía"}), 400
+    
+    conn = get_connection()
+    # Eliminar solo los ids recibidos
+    placeholders = ",".join("?" * len(ids))
+    conn.execute(
+        f"DELETE FROM sensor_events WHERE id IN ({placeholders})",
+        ids
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": f"{len(ids)} registros eliminados"}), 200
