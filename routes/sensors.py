@@ -104,11 +104,25 @@ def receive_sensor():
             )
         else:
             modo = get_modo_actual()
-            if modo != "solo_alertas" and guardar_lectura(conn, sensor_type, modo):
-                conn.execute(
-                    "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
-                    (sensor_type, value, alert)
-                )
+            if modo != "solo_alertas":
+                # Obtener la ultima lectura guardada para comparar
+                ultima = conn.execute(
+                    "SELECT value FROM sensor_events WHERE type=? ORDER BY timestamp DESC LIMIT 1",
+                    (sensor_type,)
+                ).fetchone()
+                
+                # Si la diferencia con la ultima lectura es >= 5%, guardar aunque no haya pasado el intervalo
+                cambio_significativo = False
+                if ultima:
+                    diferencia = abs(value - float(ultima["value"]))
+                    cambio_significativo = diferencia >= 5.0
+                
+                # Guardar si hubo cambio significativo O si pasó el intervalo configurado
+                if cambio_significativo or guardar_lectura(conn, sensor_type, modo):
+                    conn.execute(
+                        "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+                        (sensor_type, value, alert)
+                    )
     conn.commit()
     conn.close()
 
@@ -176,7 +190,34 @@ def sensor_live():
 
 @sensors_bp.route("/api/sensor/live", methods=["GET"])
 def get_sensor_live():
-    return jsonify(ultimo_valor), 200
+    return jsonify(ultimo_valor), 
+
+@sensors_bp.route("/api/sensor/histograma", methods=["GET"])
+def get_histograma():
+    tipo = request.args.get("type")  # gas o temperatura
+    fecha = request.args.get("fecha")  # formato YYYY-MM-DD
+    
+    if not tipo or not fecha:
+        return jsonify({"error": "Faltan parametros type y fecha"}), 400
+    
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT 
+            strftime('%H', timestamp) as hora,
+            AVG(value) as promedio,
+            MAX(value) as maximo,
+            MIN(value) as minimo,
+            COUNT(*) as lecturas
+        FROM sensor_events
+        WHERE type = ?
+          AND date(timestamp) = ?
+          AND alert = 0
+        GROUP BY strftime('%H', timestamp)
+        ORDER BY hora ASC
+    """, (tipo, fecha)).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows]), 200
+
 # ─── Config: modo historial ──────────────────────────────────
 @sensors_bp.route("/api/config/modo", methods=["GET"])
 def get_modo():
