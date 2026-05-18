@@ -210,12 +210,12 @@ def get_histograma():
             COUNT(*) as lecturas
         FROM sensor_events
         WHERE type = ?
-          AND date(timestamp) = ?
+          AND date(datetime(timestamp, '-7 hours')) = ?
           AND alert = 0
-        GROUP BY strftime('%H', timestamp)
+        GROUP BY strftime('%H', datetime(timestamp, '-7 hours'))
         ORDER BY hora ASC
     """, (tipo, fecha)).fetchall()
-    
+
     alertas = conn.execute("""
         SELECT 
             strftime('%H', timestamp) as hora,
@@ -223,7 +223,7 @@ def get_histograma():
             timestamp
         FROM sensor_events
         WHERE type = ?
-          AND date(timestamp) = ?
+          AND date(datetime(timestamp, '-7 hours')) = ?
           AND alert = 1
         ORDER BY timestamp ASC
     """, (tipo, fecha)).fetchall()
