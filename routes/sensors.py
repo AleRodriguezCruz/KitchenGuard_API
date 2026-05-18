@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from database import get_connection
 
 sensors_bp = Blueprint("sensors", __name__)
+# Último valor en memoria (no se guarda en BD)
+ultimo_valor = {}
 
 COOLDOWN_SEGUNDOS = 180  # 3 minutos
 
@@ -95,12 +97,18 @@ def receive_sensor():
                 "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE id=?",
                 (evento_activo["id"],)
             )
-        modo = get_modo_actual()
-        if modo != "solo_alertas" and guardar_lectura(conn, sensor_type, modo):
+            # Siempre guardar lectura de normalización aunque sea solo_alertas
             conn.execute(
-                "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
-                (sensor_type, value, alert)
+                "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, 0)",
+                (sensor_type, value)
             )
+        else:
+            modo = get_modo_actual()
+            if modo != "solo_alertas" and guardar_lectura(conn, sensor_type, modo):
+                conn.execute(
+                    "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, ?)",
+                    (sensor_type, value, alert)
+                )
     conn.commit()
     conn.close()
 
@@ -158,6 +166,17 @@ def get_latest():
         "panic": False
     }), 200
 
+@sensors_bp.route("/api/sensor/live", methods=["POST"])
+def sensor_live():
+    data = request.get_json()
+    if not data or "type" not in data or "value" not in data:
+        return jsonify({"error": "Faltan campos"}), 400
+    ultimo_valor[data["type"]] = data["value"]
+    return jsonify({"message": "OK"}), 200
+
+@sensors_bp.route("/api/sensor/live", methods=["GET"])
+def get_sensor_live():
+    return jsonify(ultimo_valor), 200
 # ─── Config: modo historial ──────────────────────────────────
 @sensors_bp.route("/api/config/modo", methods=["GET"])
 def get_modo():
@@ -248,7 +267,7 @@ def cerrar_evento_activo():
             "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, 0)",
             (data["type"], evento["valor_pico"])
         )
-        
+
     # Guardar cooldown en config
     conn.execute(
         "INSERT OR REPLACE INTO config (key, value) VALUES (?, strftime('%s','now'))",
