@@ -118,12 +118,12 @@ def get_sensors():
     conn = get_connection()
     if sensor_type:
         rows = conn.execute(
-            "SELECT * FROM sensor_events WHERE type=? ORDER BY timestamp DESC LIMIT 50",
+            "SELECT * FROM sensor_events WHERE type=? ORDER BY timestamp DESC LIMIT 500",
             (sensor_type,)
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM sensor_events ORDER BY timestamp DESC LIMIT 50"
+            "SELECT * FROM sensor_events ORDER BY timestamp DESC LIMIT 500"
         ).fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
@@ -183,7 +183,7 @@ def set_modo():
 def get_alertas_eventos():
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM alertas_eventos ORDER BY timestamp_inicio DESC LIMIT 50"
+        "SELECT * FROM alertas_eventos ORDER BY timestamp_inicio DESC LIMIT 500"
     ).fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
