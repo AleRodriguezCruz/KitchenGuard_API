@@ -222,20 +222,30 @@ def cerrar_evento_activo():
 @sensors_bp.route("/api/sensor/eliminar", methods=["POST"])
 def eliminar_sensores():
     data = request.get_json()
-    if not data or "ids" not in data or not isinstance(data["ids"], list):
-        return jsonify({"error": "Falta lista de ids"}), 400
-    
-    ids = data["ids"]
-    if not ids:
-        return jsonify({"error": "Lista vacía"}), 400
-    
+    if not data or "ids" not in data:
+        return jsonify({"error": "Faltan ids"}), 400
     conn = get_connection()
-    # Eliminar solo los ids recibidos
-    placeholders = ",".join("?" * len(ids))
-    conn.execute(
-        f"DELETE FROM sensor_events WHERE id IN ({placeholders})",
-        ids
+
+    # Obtener tipos con alerta antes de eliminar
+    placeholders = ','.join('?' * len(data["ids"]))
+    rows = conn.execute(
+        f"SELECT type FROM sensor_events WHERE id IN ({placeholders}) AND alert=1",
+        data["ids"]
+    ).fetchall()
+
+    # Cerrar alertas_eventos activos de esos tipos
+    tipos_con_alerta = set(row["type"] for row in rows)
+    for tipo in tipos_con_alerta:
+        conn.execute(
+            "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE type=? AND activa=1",
+            (tipo,)
+        )
+    
+    # Eliminar los registros
+    conn.executemany(
+        "DELETE FROM sensor_events WHERE id = ?",
+        [(id,) for id in data["ids"]]
     )
     conn.commit()
     conn.close()
-    return jsonify({"message": f"{len(ids)} registros eliminados"}), 200
+    return jsonify({"message": "Eliminados"}), 200
