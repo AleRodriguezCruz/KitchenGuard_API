@@ -230,10 +230,25 @@ def cerrar_evento_activo():
     if not data or "type" not in data:
         return jsonify({"error": "Falta type"}), 400
     conn = get_connection()
+    
+    # Obtener valor pico del evento antes de cerrarlo
+    evento = conn.execute(
+        "SELECT valor_pico FROM alertas_eventos WHERE type=? AND activa=1",
+        (data["type"],)
+    ).fetchone()
+
     conn.execute(
         "UPDATE alertas_eventos SET activa=0, timestamp_fin=CURRENT_TIMESTAMP WHERE type=? AND activa=1",
         (data["type"],)
     )
+
+     # Guardar lectura actual con el valor real
+    if evento:
+        conn.execute(
+            "INSERT INTO sensor_events (type, value, alert) VALUES (?, ?, 0)",
+            (data["type"], evento["valor_pico"])
+        )
+        
     # Guardar cooldown en config
     conn.execute(
         "INSERT OR REPLACE INTO config (key, value) VALUES (?, strftime('%s','now'))",
