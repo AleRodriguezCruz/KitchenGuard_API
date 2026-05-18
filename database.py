@@ -55,11 +55,19 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # La columna ya existe, no hay nada que hacer
 
-    # Valor por defecto del modo
+    # Valor por defecto del modo (intervalos de tiempo)
     try:
-        cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('modo', 'todo')")
+        cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('modo', 'solo_alertas')")
         conn.commit()
         print("✅ Config: modo inicial insertado")
+    except sqlite3.OperationalError:
+        pass
+
+    # Valor por defecto del tab historial
+    try:
+        cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('tab_historial', 'sensores')")
+        conn.commit()
+        print("✅ Config: tab_historial inicial insertado")
     except sqlite3.OperationalError:
         pass
     
