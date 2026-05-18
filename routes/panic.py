@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from database import get_connection
 
 panic_bp = Blueprint("panic", __name__)
