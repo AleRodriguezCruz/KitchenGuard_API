@@ -53,3 +53,19 @@ def atender_panico(event_id):
     conn.commit()
     conn.close()
     return jsonify({"message": "Evento atendido", "id": event_id}), 200
+
+
+# endpoin para eliminar registro de panico en historial
+@panic_bp.route("/api/panic/eliminar", methods=["POST"])
+def eliminar_panicos():
+    data = request.get_json()
+    if not data or "ids" not in data:
+        return jsonify({"error": "Faltan ids"}), 400
+    conn = get_connection()
+    conn.executemany(
+        "DELETE FROM panic_events WHERE id = ?",
+        [(id,) for id in data["ids"]]
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Eliminados"}), 200
