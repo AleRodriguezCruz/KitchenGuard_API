@@ -203,7 +203,7 @@ def get_histograma():
     conn = get_connection()
     rows = conn.execute("""
         SELECT 
-            strftime('%H', timestamp) as hora,
+            strftime('%H', datetime(timestamp, '-7 hours')) as hora,
             AVG(value) as promedio,
             MAX(value) as maximo,
             MIN(value) as minimo,
@@ -218,7 +218,7 @@ def get_histograma():
 
     alertas = conn.execute("""
         SELECT 
-            strftime('%H', timestamp) as hora,
+            strftime('%H', datetime(timestamp, '-7 hours')) as hora,
             value,
             timestamp
         FROM sensor_events
@@ -233,14 +233,14 @@ def get_histograma():
         "lecturas": [dict(row) for row in rows],
         "alertas":  [dict(row) for row in alertas]
         }), 200
-
+''' 
 @sensors_bp.route("/api/test/hora", methods=["GET"])
 def test_hora():
     conn = get_connection()
     row = conn.execute("SELECT datetime('now') as utc, datetime('now', '-7 hours') as ensenada").fetchone()
     conn.close()
     return jsonify(dict(row)), 200
-
+'''
 # ─── Config: modo historial ──────────────────────────────────
 @sensors_bp.route("/api/config/modo", methods=["GET"])
 def get_modo():
