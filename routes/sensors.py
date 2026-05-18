@@ -234,6 +234,13 @@ def get_histograma():
         "alertas":  [dict(row) for row in alertas]
         }), 200
 
+@sensors_bp.route("/api/test/hora", methods=["GET"])
+def test_hora():
+    conn = get_connection()
+    row = conn.execute("SELECT datetime('now') as utc, datetime('now', '-7 hours') as ensenada").fetchone()
+    conn.close()
+    return jsonify(dict(row)), 200
+
 # ─── Config: modo historial ──────────────────────────────────
 @sensors_bp.route("/api/config/modo", methods=["GET"])
 def get_modo():
