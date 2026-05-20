@@ -37,6 +37,18 @@ def get_timers():
     conn.close()
     return jsonify([dict(row) for row in rows]), 200
 
+# Devolver el timer mas antiguo
+@timers_bp.route("/api/timers/siguiente", methods=["GET"])
+def get_siguiente_timer():
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM timers WHERE active=1 ORDER BY created_at ASC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify(None), 200
+    return jsonify(dict(row)), 200
+
 @timers_bp.route("/api/timers/<int:timer_id>", methods=["DELETE"])
 def delete_timer(timer_id):
     conn = get_connection()
