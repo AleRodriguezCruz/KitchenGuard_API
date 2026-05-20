@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 from database import get_connection
+from datetime import datetime, timezone
 
 sensors_bp = Blueprint("sensors", __name__)
 # Último valor en memoria (no se guarda en BD)
 ultimo_valor = {}
+ultimo_timestamp = None
 
 COOLDOWN_SEGUNDOS = 180  # 3 minutos
 
@@ -180,16 +182,27 @@ def get_latest():
         "panic": False
     }), 200
 
+
 @sensors_bp.route("/api/sensor/live", methods=["POST"])
 def sensor_live():
+    global ultimo_timestamp
     data = request.get_json()
     if not data or "type" not in data or "value" not in data:
         return jsonify({"error": "Faltan campos"}), 400
     ultimo_valor[data["type"]] = data["value"]
+    ultimo_timestamp = datetime.now(timezone.utc).isoformat()
     return jsonify({"message": "OK"}), 200
 
 @sensors_bp.route("/api/sensor/live", methods=["GET"])
 def get_sensor_live():
+    if not ultimo_valor or ultimo_timestamp is None:
+        return jsonify({}), 200
+    
+    # Si el último dato tiene más de 15 segundos, considerar offline
+    segundos = (datetime.now(timezone.utc) - datetime.fromisoformat(ultimo_timestamp)).total_seconds()
+    if segundos > 15:
+        return jsonify({}), 200
+    
     return jsonify(ultimo_valor), 200
 
 @sensors_bp.route("/api/sensor/histograma", methods=["GET"])
