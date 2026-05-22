@@ -12,8 +12,24 @@ def debug_timer():
     if row is None:
         return jsonify(None), 200
     timer = dict(row)
-    ahora_utc = datetime.now(timezone.utc).isoformat()
-    return jsonify({"created_at": timer["created_at"], "ahora_utc": ahora_utc}), 200
+    created_at_str = timer["created_at"]
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            created_at = datetime.strptime(created_at_str, fmt).replace(tzinfo=timezone.utc)
+            break
+        except ValueError:
+            continue
+    ahora = datetime.now(timezone.utc)
+    transcurrido = int((ahora - created_at).total_seconds())
+    ahora_utc = ahora.isoformat()
+    return jsonify({
+        "created_at": timer["created_at"],
+        "ahora_utc": ahora_utc,
+        "transcurrido": transcurrido,
+        "duration": timer["duration"],
+        "remaining": timer["duration"] - transcurrido
+    }), 200
+
 
 @timers_bp.route("/api/timers", methods=["POST"])
 def create_timer():
