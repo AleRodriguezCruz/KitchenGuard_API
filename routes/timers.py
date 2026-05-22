@@ -65,11 +65,6 @@ def get_siguiente_timer():
     remaining = max(0, timer["duration"] - transcurrido)
     timer["remaining"] = remaining
 
-    #timestamp  de expiración en milisegundos UTC
-    expires_at = created_at_str 
-    timer["expires_at_ms"] = int((created_at.timestamp() + timer["duration"]) * 1000)
-
-
     return jsonify(timer), 200
 
 @timers_bp.route("/api/timers/<int:timer_id>", methods=["DELETE"])
