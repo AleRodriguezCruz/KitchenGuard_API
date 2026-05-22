@@ -18,7 +18,7 @@ def debug_timer():
 @timers_bp.route("/api/timers", methods=["POST"])
 def create_timer():
 
-    ahora_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    ahora_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")
     data = request.get_json()
     if not data or "label" not in data or "duration" not in data:
         return jsonify({"error": "Faltan campos: label y duration"}), 400
