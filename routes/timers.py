@@ -73,7 +73,7 @@ def timer_activo():
 
     ahora = datetime.now(timezone.utc)
     transcurrido = int((ahora - created_at).total_seconds())
-    remaining = max(0, timer["duration"] - transcurrido - 1)  # -1 compensa latencia
+    remaining = max(0, timer["duration"] - transcurrido)  
 
     return jsonify({"id": timer["id"], "remaining": remaining}), 200
 
