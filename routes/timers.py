@@ -89,11 +89,11 @@ def timer_activo():
 
     ahora = datetime.now(timezone.utc)
     transcurrido = int((ahora - created_at).total_seconds())
-    remaining = max(0, timer["duration"] - transcurrido)  
+    remaining = max(0, timer["duration"] - transcurrido - 1)  # -1 compensa latencia
 
     return jsonify({"id": timer["id"], "remaining": remaining}), 200
-
 # Devolver el timer mas antiguo
+
 @timers_bp.route("/api/timers/siguiente", methods=["GET"])
 def get_siguiente_timer():
     conn = get_connection()
