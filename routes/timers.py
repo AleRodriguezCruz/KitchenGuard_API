@@ -4,8 +4,21 @@ from datetime import datetime, timezone
 
 timers_bp = Blueprint("timers", __name__)
 
+@timers_bp.route("/api/timers/debug", methods=["GET"])
+def debug_timer():
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM timers WHERE active=1 ORDER BY created_at ASC LIMIT 1").fetchone()
+    conn.close()
+    if row is None:
+        return jsonify(None), 200
+    timer = dict(row)
+    ahora_utc = datetime.now(timezone.utc).isoformat()
+    return jsonify({"created_at": timer["created_at"], "ahora_utc": ahora_utc}), 200
+
 @timers_bp.route("/api/timers", methods=["POST"])
 def create_timer():
+
+    ahora_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     data = request.get_json()
     if not data or "label" not in data or "duration" not in data:
         return jsonify({"error": "Faltan campos: label y duration"}), 400
@@ -15,8 +28,8 @@ def create_timer():
 
     conn = get_connection()
     cursor = conn.execute(
-        "INSERT INTO timers (label, duration) VALUES (?, ?)",
-        (label, duration)
+        "INSERT INTO timers (label, duration, created_at) VALUES (?, ?, ?)",
+        (label, duration, ahora_utc)
     )
     conn.commit()
     timer_id = cursor.lastrowid
