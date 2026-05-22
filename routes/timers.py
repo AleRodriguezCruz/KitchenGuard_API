@@ -42,11 +42,27 @@ def get_timers():
 def timer_activo():
     conn = get_connection()
     row = conn.execute(
-        "SELECT id FROM timers WHERE active=1 ORDER BY created_at ASC LIMIT 1"
+        "SELECT * FROM timers WHERE active=1 ORDER BY created_at ASC LIMIT 1"
     ).fetchone()
     conn.close()
-    return jsonify({"id": row["id"]} if row else None), 200
 
+    if row is None:
+        return jsonify(None), 200
+
+    timer = dict(row)
+    created_at_str = timer["created_at"]
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            created_at = datetime.strptime(created_at_str, fmt).replace(tzinfo=timezone.utc)
+            break
+        except ValueError:
+            continue
+
+    ahora = datetime.now(timezone.utc)
+    transcurrido = int((ahora - created_at).total_seconds())
+    remaining = max(0, timer["duration"] - transcurrido - 1)  # -1 compensa latencia
+
+    return jsonify({"id": timer["id"], "remaining": remaining}), 200
 
 # Devolver el timer mas antiguo
 @timers_bp.route("/api/timers/siguiente", methods=["GET"])
