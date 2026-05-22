@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from database import get_connection
+from datetime import datetime, timezone
 
 timers_bp = Blueprint("timers", __name__)
 
@@ -45,9 +46,26 @@ def get_siguiente_timer():
         "SELECT * FROM timers WHERE active=1 ORDER BY created_at ASC LIMIT 1"
     ).fetchone()
     conn.close()
+
     if row is None:
         return jsonify(None), 200
-    return jsonify(dict(row)), 200
+
+    timer = dict(row)
+    created_at_str = timer["created_at"]
+
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            created_at = datetime.strptime(created_at_str, fmt).replace(tzinfo=timezone.utc)
+            break
+        except ValueError:
+            continue
+
+    ahora = datetime.now(timezone.utc)
+    transcurrido = int((ahora - created_at).total_seconds())
+    remaining = max(0, timer["duration"] - transcurrido)
+    timer["remaining"] = remaining
+
+    return jsonify(timer), 200
 
 @timers_bp.route("/api/timers/<int:timer_id>", methods=["DELETE"])
 def delete_timer(timer_id):
